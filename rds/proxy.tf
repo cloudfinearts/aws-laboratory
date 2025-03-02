@@ -5,7 +5,7 @@ resource "aws_secretsmanager_secret" "this" {
 locals {
   secret = {
     username = "postgres"
-    password = "bobsol123"
+    password = var.db_password
   }
 }
 

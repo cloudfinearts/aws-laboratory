@@ -53,6 +53,10 @@ resource "aws_vpc_security_group_ingress_rule" "this" {
   cidr_ipv4         = "0.0.0.0/0"
 }
 
+variable "db_password" {
+  type = string
+}
+
 resource "aws_db_instance" "this" {
   identifier = "rds-pg-labs"
 
@@ -75,14 +79,13 @@ resource "aws_db_instance" "this" {
   publicly_accessible             = true
 
   username = "postgres"
-  password = "bobsol123"
+  password = var.db_password
   port     = 5432
   db_name  = "pglab"
 
   db_subnet_group_name = aws_db_subnet_group.this.name
   # MUST associate SG, having SG on VPC does not suffice, otherwise psql hangs
   vpc_security_group_ids = [aws_security_group.rds.id]
-  #   ca_cert_identifier = "value"
 }
 
 

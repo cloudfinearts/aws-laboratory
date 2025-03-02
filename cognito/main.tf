@@ -18,10 +18,9 @@ resource "aws_apigatewayv2_integration" "this" {
 
 // create endpoint authorizer
 resource "aws_apigatewayv2_authorizer" "this" {
-  api_id          = aws_apigatewayv2_api.this.id
-  authorizer_type = "JWT"
-  name            = "authorizer"
-  # identity_sources = ["$request.header.Authorization"]
+  api_id           = aws_apigatewayv2_api.this.id
+  authorizer_type  = "JWT"
+  name             = "authorizer"
   identity_sources = ["$request.header.Token"]
 
   jwt_configuration {
@@ -67,7 +66,6 @@ resource "aws_iam_role_policy_attachment" "api" {
 # account's setting
 resource "aws_api_gateway_account" "this" {
   cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch_logs.arn
-  reset_on_delete     = true
 }
 
 resource "aws_cloudwatch_log_group" "api" {
@@ -81,7 +79,6 @@ resource "aws_apigatewayv2_stage" "this" {
   name        = "dev"
   auto_deploy = true
 
-  # logs show up quickly
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.api.arn
 
