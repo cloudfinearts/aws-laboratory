@@ -1,9 +1,3 @@
-data "aws_caller_identity" "this" {
-}
-
-data "aws_region" "this" {
-}
-
 data "aws_iam_policy_document" "ecs_exec" {
   statement {
     effect = "Allow"

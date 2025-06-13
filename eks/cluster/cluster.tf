@@ -26,8 +26,7 @@ resource "aws_ec2_tag" "elb" {
   value = "1"
 }
 
-# addons such as coredns are added by default
-# in order to manage them for an upgrade, you must add them explicitly
+# addons (coredns, kube-proxy etc.) are added by default, updating cluster does not update add-ons
 resource "aws_eks_cluster" "this" {
   name     = var.name
   role_arn = aws_iam_role.cluster.arn
@@ -49,8 +48,8 @@ resource "aws_eks_node_group" "this" {
   subnet_ids    = data.aws_subnets.default.ids
   capacity_type = "SPOT"
   # 2 cpu 8 GB, default is t3.medium (2 cpu, 4GB)
-  instance_types = ["m5.large"]
-  #node_group_name = "${var.name}-ng"
+  instance_types  = ["m5.large"]
+  node_group_name = "${var.name}-ng"
 
   scaling_config {
     desired_size = 2

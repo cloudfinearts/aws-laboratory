@@ -32,6 +32,7 @@ locals {
 # }},
 
 // add a statement for OR condition
+// resource-based vs. identity-based policy
 resource "aws_s3_bucket_policy" "config_delivery" {
   bucket = aws_s3_bucket.log_bucket.bucket
   policy = <<-EOT

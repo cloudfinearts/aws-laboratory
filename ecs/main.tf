@@ -6,6 +6,12 @@ data "aws_availability_zones" "current" {
   state = "available"
 }
 
+data "aws_caller_identity" "this" {
+}
+
+data "aws_region" "this" {
+}
+
 module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
 
@@ -24,8 +30,3 @@ module "vpc" {
     application = "retail-store"
   }
 }
-
-output "lb" {
-  value = aws_lb.this.dns_name
-}
-
