@@ -239,6 +239,7 @@ resource "aws_ecs_task_definition" "catalog" {
       },
       {
         name : "DB_PASSWORD",
+        # AWS supports access to json field in task def using ARN
         valueFrom : "${aws_db_instance.catalog.master_user_secret[0].secret_arn}:password::"
       },
       {

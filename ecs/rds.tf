@@ -47,7 +47,7 @@ resource "aws_ssm_parameter" "endpoint" {
   value = aws_db_instance.catalog.endpoint
 }
 
-# install mariadb to get mysql cli
+# install mariadb package to get mysql cli
 # module "bastion" {
 #   source    = "../modules/private-bastion"
 #   subnet_id = module.vpc.private_subnets[0]

@@ -11,6 +11,14 @@ resource "aws_vpc_security_group_ingress_rule" "lb" {
   cidr_ipv4         = "0.0.0.0/0"
 }
 
+resource "aws_vpc_security_group_ingress_rule" "tls" {
+  ip_protocol       = "tcp"
+  security_group_id = aws_security_group.lb.id
+  from_port         = 443
+  to_port           = 443
+  cidr_ipv4         = "0.0.0.0/0"
+}
+
 resource "aws_vpc_security_group_egress_rule" "lb" {
   ip_protocol       = "-1"
   security_group_id = aws_security_group.lb.id
@@ -58,4 +66,15 @@ resource "aws_lb_listener" "this" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.this.arn
   }
+
+
+  # default_action {
+  #   type = "redirect"
+
+  #   redirect {
+  #     port        = "443"
+  #     protocol    = "HTTPS"
+  #     status_code = "HTTP_301"
+  #   }
+  # }
 }

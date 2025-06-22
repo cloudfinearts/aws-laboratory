@@ -47,15 +47,17 @@ resource "aws_ecs_service" "ui" {
     assign_public_ip = false
   }
 
-  # only to resolve catalog and assets services
+  # service discovery between services
+  # inter-services TLS supports only AWS Private CA, can be costly
   service_connect_configuration {
     enabled   = true
     namespace = aws_service_discovery_http_namespace.retailStore.name
+    # multiple services allowed
     service {
-      port_name = "application"
-      # common name for the service
+      # service created in Cloud map linked to port name
       discovery_name = "ui"
-      # alias(es) for lookup by clients
+      port_name      = "application"
+      # alias used by other services
       client_alias {
         port     = 80
         dns_name = "ui"
@@ -126,6 +128,16 @@ resource "aws_ecs_service" "catalog" {
       client_alias {
         port     = 80
         dns_name = "catalog"
+      }
+    }
+    # envoy logs
+    # ui service could not resolve catalog dns, got resolved by adding log config to ui service :)
+    log_configuration {
+      log_driver = "awslogs"
+      options = {
+        awslogs-group         = aws_cloudwatch_log_group.task.name
+        awslogs-region        = data.aws_region.this.name
+        awslogs-stream-prefix = "catalog-service-connect"
       }
     }
   }
