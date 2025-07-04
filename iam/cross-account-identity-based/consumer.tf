@@ -1,3 +1,5 @@
+# https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies-cross-account-resource-access.html
+
 provider "aws" {
   alias   = "security"
   region  = "eu-central-1"
@@ -33,8 +35,9 @@ resource "aws_secretsmanager_secret_version" "consumer" {
 
 data "aws_iam_policy_document" "consumer" {
   statement {
-    effect    = "Allow"
-    actions   = ["sts:AssumeRole"]
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+    # role to be assumed by consumer user
     resources = [aws_iam_role.producer.arn]
   }
 }
