@@ -7,75 +7,6 @@ resource "aws_ecs_cluster" "this" {
   }
 }
 
-data "aws_iam_policy_document" "trust" {
-  statement {
-    sid = "AllowEcsAssumeRole"
-    actions = [
-      "sts:AssumeRole"
-    ]
-    effect = "Allow"
-    principals {
-      type        = "Service"
-      identifiers = ["ecs-tasks.amazonaws.com"]
-    }
-  }
-}
-
-data "aws_iam_policy_document" "task" {
-  statement {
-    actions = [
-      # channel are used for session communication
-      "ssmmessages:CreateControlChannel",
-      "ssmmessages:CreateDataChannel",
-      "ssmmessages:OpenControlChannel",
-      "ssmmessages:OpenDataChannel"
-    ]
-    effect    = "Allow"
-    resources = ["*"]
-  }
-}
-
-resource "aws_iam_role" "task" {
-  assume_role_policy = data.aws_iam_policy_document.trust.json
-  name               = "retailStoreEcsTaskRole"
-}
-
-resource "aws_iam_role_policy" "task" {
-  name   = "SecureShellBetweenEcsAndSessionManager"
-  policy = data.aws_iam_policy_document.task.json
-  role   = aws_iam_role.task.name
-}
-
-# allow ECS agent to access AWS api, e.g. pulling images, writing logs
-resource "aws_iam_role" "task_execution" {
-  assume_role_policy = data.aws_iam_policy_document.trust.json
-  name               = "retailStoreEcsTaskExecutionRole"
-}
-
-resource "aws_iam_role_policy_attachment" "task_execution" {
-  # use ECR, Cloudwatch etc.
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-  role       = aws_iam_role.task_execution.name
-}
-
-resource "aws_iam_role_policy_attachment" "tax_execution_ssm" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
-  role       = aws_iam_role.task_execution.name
-}
-
-data "aws_iam_policy_document" "execution" {
-  statement {
-    effect    = "Allow"
-    actions   = ["secretsmanager:GetSecretValue"]
-    resources = [aws_db_instance.catalog.master_user_secret[0].secret_arn]
-  }
-}
-
-resource "aws_iam_role_policy" "execution" {
-  policy = data.aws_iam_policy_document.execution.json
-  role   = aws_iam_role.task_execution.name
-}
-
 resource "aws_cloudwatch_log_group" "task" {
   name = "retail-store-ecs-tasks"
 }
@@ -126,7 +57,40 @@ resource "aws_ecs_task_definition" "ui" {
       {
         name  = "ENDPOINTS_CATALOG"
         value = "http://catalog"
-      }
+      },
+      # enable OTEL
+      {
+        "name" : "JAVA_TOOL_OPTIONS",
+        "value" : "-javaagent:/opt/aws-opentelemetry-agent.jar"
+      },
+      {
+        "name" : "OTEL_JAVAAGENT_ENABLED",
+        "value" : "true"
+      },
+      {
+        "name" : "OTEL_EXPORTER_OTLP_ENDPOINT",
+        "value" : "http://localhost:4317"
+      },
+      {
+        "name" : "OTEL_EXPORTER_OTLP_INSECURE",
+        "value" : "true"
+      },
+      {
+        "name" : "OTEL_SERVICE_NAME",
+        "value" : "ui-application"
+      },
+      {
+        "name" : "OTEL_TRACES_EXPORTER",
+        "value" : "otlp"
+      },
+      {
+        "name" : "OTEL_METRICS_EXPORTER",
+        "value" : "otlp"
+      },
+      {
+        "name" : "OTEL_LOGS_EXPORTER",
+        "value" : "none"
+      },
     ]
 
     essential = true
@@ -151,7 +115,32 @@ resource "aws_ecs_task_definition" "ui" {
         awslogs-stream-prefix = "ui-service"
       }
     }
-  }])
+    },
+    # add container for ADOT
+    {
+      name      = "aws-otel-collector"
+      image     = "public.ecr.aws/aws-observability/aws-otel-collector:latest"
+      essential = true
+
+      portMappings = [{
+        containerPort = 4317
+        hostPort      = 4317
+        protocol      = "tcp"
+      }]
+
+      # defaults from https://github.com/aws-observability/aws-otel-collector/blob/main/config/ecs/ecs-cloudwatch-xray.yaml
+      command = ["--config=/etc/ecs/ecs-cloudwatch-xray.yaml"]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.task.name
+          awslogs-region        = data.aws_region.this.name
+          awslogs-stream-prefix = "aws-otel-collector"
+        }
+      }
+    },
+  ])
 }
 
 resource "aws_ecs_task_definition" "assets" {
@@ -167,6 +156,7 @@ resource "aws_ecs_task_definition" "assets" {
   }
 
   execution_role_arn = aws_iam_role.task_execution.arn
+  task_role_arn      = aws_iam_role.task.arn
 
   container_definitions = jsonencode([{
     name  = "assets"
@@ -214,6 +204,7 @@ resource "aws_ecs_task_definition" "catalog" {
   }
 
   execution_role_arn = aws_iam_role.task_execution.arn
+  task_role_arn      = aws_iam_role.task.arn
 
   container_definitions = jsonencode([{
     name  = "catalog"
@@ -227,10 +218,45 @@ resource "aws_ecs_task_definition" "catalog" {
       appProtocol   = "http"
     }]
 
-    environment = [{
-      name  = "DB_NAME"
-      value = aws_db_instance.catalog.db_name
-    }]
+    environment = [
+      {
+        name  = "DB_NAME"
+        value = aws_db_instance.catalog.db_name
+      },
+      # enable OTEL
+      {
+        "name" : "JAVA_TOOL_OPTIONS",
+        "value" : "-javaagent:/opt/aws-opentelemetry-agent.jar"
+      },
+      {
+        "name" : "OTEL_JAVAAGENT_ENABLED",
+        "value" : "true"
+      },
+      {
+        "name" : "OTEL_EXPORTER_OTLP_ENDPOINT",
+        "value" : "http://localhost:4317"
+      },
+      {
+        "name" : "OTEL_EXPORTER_OTLP_INSECURE",
+        "value" : "true"
+      },
+      {
+        "name" : "OTEL_SERVICE_NAME",
+        "value" : "catalog-application"
+      },
+      {
+        "name" : "OTEL_TRACES_EXPORTER",
+        "value" : "otlp"
+      },
+      {
+        "name" : "OTEL_METRICS_EXPORTER",
+        "value" : "otlp"
+      },
+      {
+        "name" : "OTEL_LOGS_EXPORTER",
+        "value" : "none"
+      },
+    ]
 
     secrets = [
       {
@@ -266,6 +292,30 @@ resource "aws_ecs_task_definition" "catalog" {
         awslogs-stream-prefix = "catalog-service"
       }
     }
-  }])
+    },
+    {
+      name      = "aws-otel-collector"
+      image     = "public.ecr.aws/aws-observability/aws-otel-collector:latest"
+      essential = true
+
+      portMappings = [{
+        containerPort = 4317
+        hostPort      = 4317
+        protocol      = "tcp"
+      }]
+
+      # defaults from https://github.com/aws-observability/aws-otel-collector/blob/main/config/ecs/ecs-cloudwatch-xray.yaml
+      command = ["--config=/etc/ecs/ecs-cloudwatch-xray.yaml"]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.task.name
+          awslogs-region        = data.aws_region.this.name
+          awslogs-stream-prefix = "aws-otel-collector"
+        }
+      }
+    }
+  ])
 }
 

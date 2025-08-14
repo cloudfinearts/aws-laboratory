@@ -27,12 +27,14 @@ resource "aws_db_instance" "catalog" {
   db_name           = "catalog"
   allocated_storage = 5
 
-  engine         = "mysql"
-  engine_version = "8.0"
+  engine = "mysql"
+  # weird authenication error in catalog service, manual connection works, DB version related? 
+  engine_version = "8.4"
   instance_class = "db.t3.micro"
 
   manage_master_user_password = true
-  username                    = "catalog"
+  # creates entry in myslql.user table, e.g. user = catalog, host = %
+  username = "catalog"
 
   #parameter_group_name = "default.mysql8.0"
   skip_final_snapshot    = true
@@ -47,7 +49,7 @@ resource "aws_ssm_parameter" "endpoint" {
   value = aws_db_instance.catalog.endpoint
 }
 
-# install mariadb package to get mysql cli
+# install mariadb server package to get mysql cli
 # module "bastion" {
 #   source    = "../modules/private-bastion"
 #   subnet_id = module.vpc.private_subnets[0]

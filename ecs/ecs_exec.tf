@@ -13,7 +13,7 @@ data "aws_iam_policy_document" "ecs_exec" {
   }
 }
 
-# log in works outside AWS without setting up SG, SSH keys
+# ECS exec works outside AWS without setting up SG, SSH keys
 # misleading error about not running agent when connecting to stopped task!
 resource "aws_iam_user_policy" "name" {
   name   = "SecureShellToEcsTasks"

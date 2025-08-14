@@ -17,6 +17,14 @@ resource "aws_vpc_security_group_ingress_rule" "service" {
   cidr_ipv4         = "0.0.0.0/0"
 }
 
+# namespace in AWS cloud map
+resource "aws_service_discovery_http_namespace" "retailStore" {
+  name = "retailstore"
+}
+
+# force order of created services to prevent DNS name resolution error
+# service connect will populate /etc/hosts by entries known at deploy time, they are NOT dynamically updated!
+# https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect-concepts-deploy.html
 resource "aws_ecs_service" "ui" {
   name            = "ui"
   cluster         = aws_ecs_cluster.this.arn
@@ -52,12 +60,16 @@ resource "aws_ecs_service" "ui" {
   service_connect_configuration {
     enabled   = true
     namespace = aws_service_discovery_http_namespace.retailStore.name
-    # multiple services allowed
+
+    # create an entry in cloud map for a named port and define how clients can discover it
     service {
-      # service created in Cloud map linked to port name
+      # entry name in cloud map, default is the port name
       discovery_name = "ui"
-      port_name      = "application"
-      # alias used by other services
+
+      # task definition port name
+      port_name = "application"
+
+      # what clients will call
       client_alias {
         port     = 80
         dns_name = "ui"
@@ -69,20 +81,18 @@ resource "aws_ecs_service" "ui" {
   lifecycle {
     ignore_changes = [desired_count]
   }
-}
 
-# namespace in aws cloud map
-resource "aws_service_discovery_http_namespace" "retailStore" {
-  name = "retailStore.local"
+  depends_on = [aws_ecs_service.assets, aws_ecs_service.catalog]
 }
 
 resource "aws_ecs_service" "assets" {
-  name                  = "assets"
-  cluster               = aws_ecs_cluster.this.arn
-  task_definition       = aws_ecs_task_definition.assets.arn
-  desired_count         = 1
-  launch_type           = "FARGATE"
-  wait_for_steady_state = true
+  name                   = "assets"
+  cluster                = aws_ecs_cluster.this.arn
+  task_definition        = aws_ecs_task_definition.assets.arn
+  desired_count          = 1
+  launch_type            = "FARGATE"
+  wait_for_steady_state  = true
+  enable_execute_command = true
 
   network_configuration {
     subnets          = module.vpc.private_subnets
@@ -94,9 +104,8 @@ resource "aws_ecs_service" "assets" {
     enabled   = true
     namespace = aws_service_discovery_http_namespace.retailStore.name
     service {
-      port_name      = "application"
       discovery_name = "assets"
-      # service definition?
+      port_name      = "application"
       client_alias {
         port     = 80
         dns_name = "assets"
@@ -106,12 +115,13 @@ resource "aws_ecs_service" "assets" {
 }
 
 resource "aws_ecs_service" "catalog" {
-  name                  = "catalog"
-  cluster               = aws_ecs_cluster.this.arn
-  task_definition       = aws_ecs_task_definition.catalog.arn
-  desired_count         = 1
-  launch_type           = "FARGATE"
-  wait_for_steady_state = true
+  name                   = "catalog"
+  cluster                = aws_ecs_cluster.this.arn
+  task_definition        = aws_ecs_task_definition.catalog.arn
+  desired_count          = 1
+  launch_type            = "FARGATE"
+  wait_for_steady_state  = true
+  enable_execute_command = true
 
   network_configuration {
     subnets          = module.vpc.private_subnets
@@ -123,21 +133,11 @@ resource "aws_ecs_service" "catalog" {
     enabled   = true
     namespace = aws_service_discovery_http_namespace.retailStore.name
     service {
-      port_name      = "application"
       discovery_name = "catalog"
+      port_name      = "application"
       client_alias {
         port     = 80
         dns_name = "catalog"
-      }
-    }
-    # envoy logs
-    # ui service could not resolve catalog dns, got resolved by adding log config to ui service :)
-    log_configuration {
-      log_driver = "awslogs"
-      options = {
-        awslogs-group         = aws_cloudwatch_log_group.task.name
-        awslogs-region        = data.aws_region.this.name
-        awslogs-stream-prefix = "catalog-service-connect"
       }
     }
   }
