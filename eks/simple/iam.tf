@@ -1,5 +1,5 @@
 resource "aws_iam_role" "cluster" {
-  name = "${var.name}-cluster"
+  name = "${local.name}-cluster"
 
   assume_role_policy = <<POLICY
 {
@@ -28,7 +28,7 @@ resource "aws_iam_role_policy_attachment" "vpcResourceController" {
 }
 
 resource "aws_iam_role" "node" {
-  name = "${var.name}-node"
+  name = "${local.name}-node"
 
   assume_role_policy = jsonencode({
     Statement = [{

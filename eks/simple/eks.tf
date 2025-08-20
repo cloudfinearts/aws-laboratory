@@ -1,7 +1,3 @@
-variable "name" {
-  type = string
-}
-
 data "aws_subnets" "default" {
   filter {
     name   = "default-for-az"
@@ -28,7 +24,7 @@ resource "aws_ec2_tag" "elb" {
 
 # addons (coredns, kube-proxy etc.) are added by default, updating cluster does not update add-ons
 resource "aws_eks_cluster" "this" {
-  name     = var.name
+  name     = local.name
   role_arn = aws_iam_role.cluster.arn
 
   vpc_config {
@@ -49,8 +45,9 @@ resource "aws_eks_node_group" "this" {
   capacity_type = "SPOT"
   # 2 cpu 8 GB, default is t3.medium (2 cpu, 4GB)
   instance_types  = ["m5.large"]
-  node_group_name = "${var.name}-ng"
+  node_group_name = "${local.name}-ng"
 
+  # does not really scale automatically!
   scaling_config {
     desired_size = 2
     max_size     = 3
