@@ -14,3 +14,12 @@ terraform {
 
   required_version = ">= 1.4.2"
 }
+
+data "aws_caller_identity" "current" {}
+
+locals {
+  tags = {
+    created-by = "eks-workshop-v2"
+    env        = var.cluster_name
+  }
+}
