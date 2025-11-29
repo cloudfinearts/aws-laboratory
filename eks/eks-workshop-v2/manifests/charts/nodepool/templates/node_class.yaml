@@ -1,0 +1,17 @@
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: {{ .Values.node_class.name }}
+  labels:
+    helm.sh/release: {{ .Release.Name }}
+spec:
+  role: {{ .Values.node_class.role }}
+  amiSelectorTerms:
+    # family@version
+    - alias: "al2023@v20251112"
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: "eks-workshop"
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: "eks-workshop"

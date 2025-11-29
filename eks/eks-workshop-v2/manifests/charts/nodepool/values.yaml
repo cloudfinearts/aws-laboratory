@@ -1,0 +1,9 @@
+node_pool:
+  name: default
+  limits:
+    cpu: "10"
+
+node_class:
+  name: default
+  # node role created by karpenter module
+  role: xxxxx

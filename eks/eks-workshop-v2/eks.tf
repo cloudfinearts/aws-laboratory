@@ -4,7 +4,9 @@ locals {
 }
 
 module "eks" {
-  source  = "terraform-aws-modules/eks/aws"
+  source = "terraform-aws-modules/eks/aws"
+  # no more upgrades as soon as lockfile exists!!
+  # terraform init -upgrade to bump versions past lockfile within the constraints
   version = "~> 21.0"
 
   name                                     = var.cluster_name
@@ -27,12 +29,15 @@ module "eks" {
     }
   }
 
-  # supports only coredns, kube-proxy, vpc-cni and aws-ebs-csi-driver
+  # supports only essential addons
   # enable other addons using terraform blueprints
   addons = {
     vpc-cni = {
-      before_compute = true
-      most_recent    = true
+      # https://github.com/aws/amazon-network-policy-controller-k8s/issues/200
+      resolve_conflicts_on_create = "OVERWRITE"
+      resolve_conflicts_on_update = "OVERWRITE"
+      before_compute              = true
+      most_recent                 = true
       configuration_values = jsonencode({
         env = {
           ENABLE_POD_ENI                    = "true"
@@ -46,12 +51,16 @@ module "eks" {
       })
     },
     coredns    = {},
-    kube-proxy = {}
+    kube-proxy = {},
+    eks-pod-identity-agent = {
+      before_compute = true
+    }
   }
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
+  # use default aws-created SG instead of the module creating new one
   create_security_group      = false
   create_node_security_group = false
 
@@ -106,8 +115,7 @@ module "eks" {
   }
 
   eks_managed_node_groups = {
-    default = {
-      # m5.large
+    karpenter = {
       instance_types           = ["t3.medium"]
       force_update_version     = true
       release_version          = var.ami_release_version
@@ -125,19 +133,29 @@ module "eks" {
       # use MNG only for karpenter and have karpenter manage node pools without ASG
       min_size     = 1
       max_size     = 3
-      desired_size = 1
+      desired_size = 2
 
       update_config = {
         max_unavailable_percentage = 50
       }
 
       labels = {
-        workshop-default = "yes"
+        karpenter-controller = "yes"
       }
+
+      # taints prevent coredns from running
+      # taints = {
+      #   "karpenter" = {
+      #     effect = "NO_SCHEDULE"
+      #     key    = "karpenter"
+      #   }
+      # }
     }
   }
 
   tags = merge(local.tags, {
+    # enable karpenter to discover nodes and SG
     "karpenter.sh/discovery" = var.cluster_name
   })
 }
+

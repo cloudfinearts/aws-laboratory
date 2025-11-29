@@ -23,10 +23,10 @@ module "vpc" {
 
   enable_nat_gateway   = true
   create_igw           = true
-  enable_dns_hostnames = true
   single_nat_gateway   = true
+  enable_dns_hostnames = true
 
-  # Manage so we can name
+  # manage to enable naming resources
   manage_default_network_acl    = true
   default_network_acl_tags      = { Name = "${var.cluster_name}-default" }
   manage_default_route_table    = true
@@ -38,6 +38,7 @@ module "vpc" {
     "kubernetes.io/role/elb" = "1"
   })
   private_subnet_tags = merge(local.tags, {
+    # karpenter auto-discovery to communicate with k8s nodes
     "karpenter.sh/discovery"          = var.cluster_name
     "kubernetes.io/role/internal-elb" = "1"
   })
