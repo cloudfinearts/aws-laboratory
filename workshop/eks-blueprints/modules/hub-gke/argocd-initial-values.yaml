@@ -1,0 +1,33 @@
+global:
+  tolerations:
+  - key: "CriticalAddonsOnly"
+    operator: "Exists"
+configs:
+  cm:
+    timeout.reconciliation: 30s
+  params:
+    server.insecure: true
+
+server:
+  resources:
+    requests:
+      cpu: 300m
+      memory: 512Mi
+  service:
+    type: LoadBalancer
+    port: 80
+    targetPort: 8080
+    annotations:
+      # external passthrough NLB, created by default but using older type
+      cloud.google.com/l4-rbs: "enabled"
+repoServer:
+  resources:
+    requests:
+      cpu: 300m
+      memory: 512Mi
+
+controller:
+  resources:
+    requests:
+      cpu: 300m
+      memory: 512Mi

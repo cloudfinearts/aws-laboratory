@@ -11,7 +11,7 @@ provider "helm" {
   }
 }
 
-# AWS LBC is an ingress controller provisioning ALB and NLB
+# AWS LBC is an ingress controller
 # resource "helm_release" "lbc" {
 #   name             = "aws-lbc"
 #   namespace        = "kube-system"

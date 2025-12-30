@@ -3,20 +3,27 @@ provider "aws" {
 }
 
 locals {
-  project = "eks-blueprints"
+  project        = "eks-blueprints"
+  eks_admin_role = "WSParticipantRole"
 }
 
-module "foundation" {
-  source  = "./modules/foundation"
-  project = local.project
-}
-
-# module "workshop" {
-#   source = "./modules/workshop"
+# host OSS git server on EC2 instance, I'll use github instead
+# module "gitea" {
+#   source  = "./modules/gitea"
+#   project = local.project
 # }
 
-output "all" {
-  value = module.foundation
+# output "gitea" {
+#   value = module.gitea
+# }
+
+module "hub" {
+  source           = "./modules/hub"
+  addons           = {}
+  environment_name = "${local.project}-dev"
 }
 
+output "hub" {
+  value = module.hub
+}
 

@@ -179,3 +179,9 @@ resource "aws_codebuild_project" "this" {
   build_timeout = 10
 }
 
+# created by default
+resource "aws_cloudwatch_log_group" "cb" {
+  name              = "/aws/codebuild/${aws_codebuild_project.this.name}"
+  retention_in_days = 1
+}
+
