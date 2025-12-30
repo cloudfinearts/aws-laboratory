@@ -15,6 +15,7 @@ failed to fetch VPC ID from instance metadata
 Destroying eks cluster did not remove LB and other resources created by AWS LBC. Make sure to delete LBC helm release prior.
 
 ## EKS Addons
+https://aws-ia.github.io/terraform-aws-eks-blueprints-addons/main/
 https://aws-ia.github.io/terraform-aws-eks-blueprints-addons/main/addons/external-dns/
 
 Weird, pretty much impossible to find available fields for external_dns field in the addon. Only Copilot provides a list (go struct) but google search comes empty handed
@@ -29,9 +30,14 @@ Validated karpenter
 - topology spread contraint will spread pods over nodes
 - empty pods will be recycled in 1min, system pods are ignored
 
-### Karpenter bugs
+### Troubleshooting karpenter
 karpenter pods print no logs, but fail on readiness/liveness probes
 - add eks pod identity addon since IRSA was not setup
+
+Nodeclaim does not have an associated node
+- node failed to register with control plane
+- check kubelet logs
+    - EKS AMI set swap on for low-mem instance type
 
 ## EKS pod identity
 https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html

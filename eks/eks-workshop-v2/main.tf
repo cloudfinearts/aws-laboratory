@@ -18,6 +18,11 @@ terraform {
 data "aws_caller_identity" "current" {}
 
 locals {
+  # enable karpenter to discover nodes and SG
+  karpenter_tags = {
+    "karpenter.sh/discovery" = var.cluster_name
+  }
+
   tags = {
     created-by = "eks-workshop-v2"
     env        = var.cluster_name

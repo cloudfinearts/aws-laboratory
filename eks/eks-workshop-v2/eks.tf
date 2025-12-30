@@ -1,8 +1,3 @@
-locals {
-  remote_node_cidr = var.remote_network_cidr
-  remote_pod_cidr  = var.remote_pod_cidr
-}
-
 module "eks" {
   source = "terraform-aws-modules/eks/aws"
   # no more upgrades as soon as lockfile exists!!
@@ -13,6 +8,7 @@ module "eks" {
   kubernetes_version                       = var.cluster_version
   endpoint_public_access                   = true
   enable_cluster_creator_admin_permissions = true
+  enable_irsa                              = false
 
   # grant access for AWS console
   access_entries = {
@@ -66,7 +62,7 @@ module "eks" {
 
   security_group_additional_rules = {
     hybrid-node = {
-      cidr_blocks = [local.remote_node_cidr]
+      cidr_blocks = [var.remote_network_cidr]
       description = "Allow all traffic from remote node/pod network"
       from_port   = 0
       to_port     = 0
@@ -75,7 +71,7 @@ module "eks" {
     }
 
     hybrid-pod = {
-      cidr_blocks = [local.remote_pod_cidr]
+      cidr_blocks = [var.remote_pod_cidr]
       description = "Allow all traffic from remote node/pod network"
       from_port   = 0
       to_port     = 0
@@ -86,7 +82,7 @@ module "eks" {
 
   node_security_group_additional_rules = {
     hybrid_node_rule = {
-      cidr_blocks = [local.remote_node_cidr]
+      cidr_blocks = [var.remote_network_cidr]
       description = "Allow all traffic from remote node/pod network"
       from_port   = 0
       to_port     = 0
@@ -95,7 +91,7 @@ module "eks" {
     }
 
     hybrid_pod_rule = {
-      cidr_blocks = [local.remote_pod_cidr]
+      cidr_blocks = [var.remote_pod_cidr]
       description = "Allow all traffic from remote node/pod network"
       from_port   = 0
       to_port     = 0
@@ -106,11 +102,11 @@ module "eks" {
 
   remote_network_config = {
     remote_node_networks = {
-      cidrs = [local.remote_node_cidr]
+      cidrs = [var.remote_network_cidr]
     }
     # Required if running webhooks on Hybrid nodes
     remote_pod_networks = {
-      cidrs = [local.remote_pod_cidr]
+      cidrs = [var.remote_pod_cidr]
     }
   }
 
@@ -153,9 +149,6 @@ module "eks" {
     }
   }
 
-  tags = merge(local.tags, {
-    # enable karpenter to discover nodes and SG
-    "karpenter.sh/discovery" = var.cluster_name
-  })
+  tags = merge(local.tags, local.karpenter_tags)
 }
 

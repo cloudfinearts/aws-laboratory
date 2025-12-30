@@ -1,7 +1,7 @@
 apiVersion: karpenter.sh/v1
 kind: NodePool
 metadata:
-  name: {{ .Values.node_pool.name }}
+  name: {{ .Values.nodePool.name }}
   labels:
     helm.sh/release: {{ .Release.Name }}
 spec:
@@ -17,16 +17,17 @@ spec:
         - key: karpenter.sh/capacity-type
           operator: In
           values: ["spot"]
+        # grr, swap enabled automatically on small types such as t3.nano, kubelet fails then
         - key: karpenter.k8s.aws/instance-category
           operator: In
-          values: ["t", "m"]
+          values: ["m"]
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass
-        name: {{ .Values.node_class.name }}
+        name: {{ .Values.nodeClass.name }}
       expireAfter: 72h
   limits:
-    cpu: {{ .Values.node_pool.limits.cpu }}
+    cpu: {{ .Values.nodePool.limits.cpu }}
   disruption:
     consolidationPolicy: WhenEmptyOrUnderutilized
     consolidateAfter: 1m

@@ -1,9 +1,10 @@
-node_pool:
+nodePool:
   name: default
   limits:
     cpu: "10"
 
-node_class:
+nodeClass:
   name: default
   # node role created by karpenter module
-  role: xxxxx
+  role: null
+  selectorTags: null

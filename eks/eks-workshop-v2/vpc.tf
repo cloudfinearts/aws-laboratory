@@ -37,11 +37,13 @@ module "vpc" {
   public_subnet_tags = merge(local.tags, {
     "kubernetes.io/role/elb" = "1"
   })
-  private_subnet_tags = merge(local.tags, {
+
+  private_subnet_tags = merge(
+    local.tags,
+    { "kubernetes.io/role/internal-elb" = "1" },
     # karpenter auto-discovery to communicate with k8s nodes
-    "karpenter.sh/discovery"          = var.cluster_name
-    "kubernetes.io/role/internal-elb" = "1"
-  })
+    local.karpenter_tags
+  )
 
   tags = local.tags
 }

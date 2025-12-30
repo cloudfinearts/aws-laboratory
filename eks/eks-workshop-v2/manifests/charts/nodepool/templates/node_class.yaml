@@ -1,17 +1,21 @@
 apiVersion: karpenter.k8s.aws/v1
 kind: EC2NodeClass
 metadata:
-  name: {{ .Values.node_class.name }}
+  name: {{ .Values.nodeClass.name }}
   labels:
     helm.sh/release: {{ .Release.Name }}
 spec:
-  role: {{ .Values.node_class.role }}
+  role: {{ required "Missing IAM node role" .Values.nodeClass.role }}
   amiSelectorTerms:
     # family@version
-    - alias: "al2023@v20251112"
+    - alias: al2023@latest
+  # cannot pass object directly from values, pasted as a map reference
+  {{- range $tag, $val := required "Missing selector tags" .Values.nodeClass.selectorTags }}
   subnetSelectorTerms:
     - tags:
-        karpenter.sh/discovery: "eks-workshop"
+        {{ $tag }}: {{ $val | quote }}
   securityGroupSelectorTerms:
     - tags:
-        karpenter.sh/discovery: "eks-workshop"
+        {{ $tag }}: {{ $val | quote }}
+  {{- end }}
+

@@ -1,4 +1,4 @@
-# create IAM role, IAM policy, cloudwatch rules, SQS queues, access entry
+# create IAM role, IAM policy, cloudwatch rules, SQS queues, access entry, EKS pod identity mapping
 module "karpenter" {
   source                          = "terraform-aws-modules/eks/aws//modules/karpenter"
   cluster_name                    = module.eks.cluster_name
@@ -49,16 +49,27 @@ resource "helm_release" "karpenter" {
 resource "helm_release" "nodepool" {
   chart     = "./manifests/charts/nodepool"
   name      = "nodepool"
-  namespace = "karpenter"
+  namespace = helm_release.karpenter.namespace
   wait      = false
 
+  # flag --set does not support maps
+  # https://helm.sh/docs/intro/using_helm/#the-format-and-limitations-of---set
+  # set = [{
+  #   name = "nodeClass.subnetSelector.tags"
+  #   value = jsonencode(local.karpenter_tags)
+  # }]
+
   values = [
-    <<-EOT
-    node_class:
-      role: ${module.karpenter.node_iam_role_name}
-    node_pool:
-      name: karpenter-np
-    EOT
+    <<EOT
+nodePool:
+  name: karpenter-np
+nodeClass:
+  role: ${module.karpenter.node_iam_role_name}
+  selectorTags:
+    %{~for name, value in local.karpenter_tags~}
+    ${name}: "${value}"
+    %{endfor}
+EOT
   ]
 }
 
