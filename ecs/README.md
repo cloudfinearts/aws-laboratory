@@ -1,6 +1,7 @@
 # ECS
 
 https://github.com/aws-containers/retail-store-sample-app/tree/main/terraform/lib
+https://github.com/gabrielsalvesdev/Deploy-ECS-CodePipeline/blob/main/labs/rolling/main.tf
 
 Tasks represents running task definition either standalone or as part of a service!
 

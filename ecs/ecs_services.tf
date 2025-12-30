@@ -142,3 +142,31 @@ resource "aws_ecs_service" "catalog" {
     }
   }
 }
+resource "aws_ecs_service" "cart" {
+  name                   = "cart"
+  cluster                = aws_ecs_cluster.this.arn
+  task_definition        = aws_ecs_task_definition.carts.arn
+  desired_count          = 1
+  launch_type            = "FARGATE"
+  wait_for_steady_state  = true
+  enable_execute_command = true
+
+  network_configuration {
+    subnets          = module.vpc.private_subnets
+    security_groups  = [aws_security_group.service.id]
+    assign_public_ip = false
+  }
+
+  service_connect_configuration {
+    enabled   = true
+    namespace = aws_service_discovery_http_namespace.retailStore.name
+    service {
+      discovery_name = "carts"
+      port_name      = "application"
+      client_alias {
+        port     = 80
+        dns_name = "carts"
+      }
+    }
+  }
+}

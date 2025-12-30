@@ -30,3 +30,19 @@ module "vpc" {
     application = "retail-store"
   }
 }
+
+# resource "aws_guardduty_detector" "main" {
+#   enable = true
+# }
+
+# # adds guardduty sidecar to every container
+# resource "aws_guardduty_detector_feature" "runtime" {
+#   detector_id = aws_guardduty_detector.main.id
+#   name        = "RUNTIME_MONITORING"
+#   status      = "ENABLED"
+
+#   additional_configuration {
+#     name   = "ECS_FARGATE_AGENT_MANAGEMENT"
+#     status = "ENABLED"
+#   }
+# }

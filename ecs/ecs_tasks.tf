@@ -58,6 +58,10 @@ resource "aws_ecs_task_definition" "ui" {
         name  = "ENDPOINTS_CATALOG"
         value = "http://catalog"
       },
+      {
+        name  = "ENDPOINTS_CARTS"
+        value = "http://carts"
+      },
       # enable OTEL
       {
         "name" : "JAVA_TOOL_OPTIONS",
@@ -317,5 +321,64 @@ resource "aws_ecs_task_definition" "catalog" {
       }
     }
   ])
+}
+
+resource "aws_ecs_task_definition" "carts" {
+  family                   = "retail-store-ecs-carts"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "1024"
+  memory                   = "2048"
+
+  runtime_platform {
+    cpu_architecture        = "X86_64"
+    operating_system_family = "LINUX"
+  }
+
+  execution_role_arn = aws_iam_role.task_execution.arn
+  task_role_arn      = aws_iam_role.task.arn
+
+  container_definitions = jsonencode([{
+    name  = "application"
+    image = "public.ecr.aws/aws-containers/retail-store-sample-cart:0.8.0"
+
+    portMappings = [{
+      name          = "application"
+      containerPort = 8080
+      hostPort      = 8080
+      protocol      = "tcp"
+      appProtocol   = "http"
+    }]
+
+    environment = [
+      {
+        name  = "CARTS_DYNAMODB_TABLENAME"
+        value = "retail-store-carts"
+      },
+      {
+        name  = "SPRING_PROFILES_ACTIVE"
+        value = "dynamodb"
+      }
+    ]
+
+    essential = true
+
+    healthCheck = {
+      command     = ["CMD-SHELL", "curl -f http://localhost:8080/actuator/health || exit 1"]
+      interval    = 10
+      timeout     = 5
+      retries     = 3
+      startPeriod = 60
+    }
+
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        awslogs-group         = aws_cloudwatch_log_group.task.name
+        awslogs-region        = data.aws_region.this.name
+        awslogs-stream-prefix = "carts-service"
+      }
+    }
+  }])
 }
 
