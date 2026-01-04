@@ -16,11 +16,10 @@ Destroying eks cluster did not remove LB and other resources created by AWS LBC.
 
 ## EKS Addons
 https://aws-ia.github.io/terraform-aws-eks-blueprints-addons/main/
-https://aws-ia.github.io/terraform-aws-eks-blueprints-addons/main/addons/external-dns/
 
-Weird, pretty much impossible to find available fields for external_dns field in the addon. Only Copilot provides a list (go struct) but google search comes empty handed
+See all addon params in the source code, e.g. ALBC
+https://github.com/aws-ia/terraform-aws-eks-blueprints-addons/blob/main/main.tf#L1441
 
-https://github.com/aws-ia/terraform-aws-eks-blueprints-addons/blob/main/docs/addons/external-dns.md
 
 ## Karpenter
 https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest/submodules/karpenter
