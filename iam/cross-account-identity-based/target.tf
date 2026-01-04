@@ -21,7 +21,7 @@ resource "aws_s3_object" "sample" {
 
 locals {
   # security account
-  consumer_account_id = "647107203699"
+  source_account_id = "647107203699"
 }
 
 data "aws_iam_policy_document" "trust" {
@@ -31,15 +31,14 @@ data "aws_iam_policy_document" "trust" {
     principals {
       type = "AWS"
       # allow both user and role or be specific role/RoleName
-      identifiers = ["arn:aws:iam::${local.consumer_account_id}:root"]
+      identifiers = ["arn:aws:iam::${local.source_account_id}:root"]
     }
   }
 }
 
-# to be assumed by consumer
 resource "aws_iam_role" "producer" {
   assume_role_policy = data.aws_iam_policy_document.trust.json
-  name               = "ConsumerS3Access"
+  name               = "SourceAccountS3Access"
 }
 
 data "aws_iam_policy_document" "s3" {
@@ -62,7 +61,7 @@ output "bucket" {
   value = aws_s3_bucket.this.bucket
 }
 
-output "consumerAssumeRole" {
+output "sourceAssumeRole" {
   value = aws_iam_role.producer.arn
 }
 

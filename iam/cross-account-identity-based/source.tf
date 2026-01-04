@@ -42,6 +42,7 @@ data "aws_iam_policy_document" "consumer" {
   }
 }
 
+# assumption of a role from another account must be explicitly allowed
 resource "aws_iam_user_policy" "consumer" {
   provider = aws.security
   policy   = data.aws_iam_policy_document.consumer.json
