@@ -6,11 +6,11 @@ module "eks" {
   kubernetes_version                       = var.cluster_version
   endpoint_public_access                   = true
   enable_cluster_creator_admin_permissions = true
-  # create OIDC provider for AWS addons
-  # enable_irsa                              = false
+  # creates OIDC provider, blueprint addons use IRSA by default
+  # enable_irsa = true
 
-  # grant access for AWS console
   access_entries = {
+    # admin access from AWS console
     "myuser" = {
       principal_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:user/myuser"
       policy_associations = {
@@ -23,6 +23,9 @@ module "eks" {
       }
     }
   }
+
+  # TODO live upgrade EKS
+  # 1.33 standard supports ends on 29th June
 
   # supports only essential addons
   # enable other addons using terraform blueprints
@@ -45,9 +48,23 @@ module "eks" {
         enableNetworkPolicy = "true"
       })
     },
-    coredns            = {},
-    kube-proxy         = {},
-    aws-ebs-csi-driver = {},
+    coredns    = {},
+    kube-proxy = {},
+
+    # no role needed when using IRSA
+    aws-ebs-csi-driver = {
+      pod_identity_association = [{
+        role_arn        = aws_iam_role.ebs_csi.arn
+        service_account = "ebs-csi-controller-sa"
+      }]
+    },
+
+    # aws-efs-csi-driver = {
+    #   pod_identity_association = [{
+    #     role_arn        = aws_iam_role.efs_csi.arn
+    #     service_account = "efs-csi-controller-sa"
+    #   }]
+    # },
 
     eks-pod-identity-agent = {
       before_compute = true
@@ -58,58 +75,58 @@ module "eks" {
   subnet_ids = module.vpc.private_subnets
 
   # use default aws-created SG instead of the module creating new one
-  create_security_group      = false
-  create_node_security_group = false
+  # create_security_group      = false
+  # create_node_security_group = false
 
-  security_group_additional_rules = {
-    hybrid-node = {
-      cidr_blocks = [var.remote_network_cidr]
-      description = "Allow all traffic from remote node/pod network"
-      from_port   = 0
-      to_port     = 0
-      protocol    = "all"
-      type        = "ingress"
-    }
+  # security_group_additional_rules = {
+  #   hybrid-node = {
+  #     cidr_blocks = [var.remote_network_cidr]
+  #     description = "Allow all traffic from remote node/pod network"
+  #     from_port   = 0
+  #     to_port     = 0
+  #     protocol    = "all"
+  #     type        = "ingress"
+  #   }
 
-    hybrid-pod = {
-      cidr_blocks = [var.remote_pod_cidr]
-      description = "Allow all traffic from remote node/pod network"
-      from_port   = 0
-      to_port     = 0
-      protocol    = "all"
-      type        = "ingress"
-    }
-  }
+  #   hybrid-pod = {
+  #     cidr_blocks = [var.remote_pod_cidr]
+  #     description = "Allow all traffic from remote node/pod network"
+  #     from_port   = 0
+  #     to_port     = 0
+  #     protocol    = "all"
+  #     type        = "ingress"
+  #   }
+  # }
 
-  node_security_group_additional_rules = {
-    hybrid_node_rule = {
-      cidr_blocks = [var.remote_network_cidr]
-      description = "Allow all traffic from remote node/pod network"
-      from_port   = 0
-      to_port     = 0
-      protocol    = "all"
-      type        = "ingress"
-    }
+  # node_security_group_additional_rules = {
+  #   hybrid_node_rule = {
+  #     cidr_blocks = [var.remote_network_cidr]
+  #     description = "Allow all traffic from remote node/pod network"
+  #     from_port   = 0
+  #     to_port     = 0
+  #     protocol    = "all"
+  #     type        = "ingress"
+  #   }
 
-    hybrid_pod_rule = {
-      cidr_blocks = [var.remote_pod_cidr]
-      description = "Allow all traffic from remote node/pod network"
-      from_port   = 0
-      to_port     = 0
-      protocol    = "all"
-      type        = "ingress"
-    }
-  }
+  #   hybrid_pod_rule = {
+  #     cidr_blocks = [var.remote_pod_cidr]
+  #     description = "Allow all traffic from remote node/pod network"
+  #     from_port   = 0
+  #     to_port     = 0
+  #     protocol    = "all"
+  #     type        = "ingress"
+  #   }
+  # }
 
-  remote_network_config = {
-    remote_node_networks = {
-      cidrs = [var.remote_network_cidr]
-    }
-    # Required if running webhooks on Hybrid nodes
-    remote_pod_networks = {
-      cidrs = [var.remote_pod_cidr]
-    }
-  }
+  # remote_network_config = {
+  #   remote_node_networks = {
+  #     cidrs = [var.remote_network_cidr]
+  #   }
+  #   # Required if running webhooks on Hybrid nodes
+  #   remote_pod_networks = {
+  #     cidrs = [var.remote_pod_cidr]
+  #   }
+  # }
 
   eks_managed_node_groups = {
     karpenter = {
@@ -129,8 +146,8 @@ module "eks" {
       # however, when upgrading AMI, MNG can temporarily scale past max limit to respect max unavailable
       # use MNG only for karpenter and have karpenter manage node pools without ASG
       min_size     = 1
-      max_size     = 3
-      desired_size = 2
+      max_size     = 2
+      desired_size = 1
 
       update_config = {
         max_unavailable_percentage = 50
@@ -152,4 +169,3 @@ module "eks" {
 
   tags = merge(local.tags, local.karpenter_tags)
 }
-

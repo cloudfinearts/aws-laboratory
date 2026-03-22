@@ -7,6 +7,7 @@ module "addons" {
   cluster_version   = module.eks.cluster_version
   oidc_provider_arn = module.eks.oidc_provider_arn
 
+  enable_metrics_server               = true
   enable_aws_load_balancer_controller = true
 
   aws_load_balancer_controller = {
@@ -15,6 +16,7 @@ module "addons" {
     policy_name   = "${module.eks.cluster_name}-alb-controller"
     wait          = true
   }
+
   #   create_kubernetes_resources = false
 
   #   enable_external_dns = true
@@ -29,6 +31,9 @@ module "addons" {
 
   # disable cfn usage telemetry
   observability_tag = null
+
+  # LBC must not register mutating webhook for service CREATE until coredns addon completed
+  depends_on = [module.eks]
 }
 
 # resource "aws_route53_zone" "retail" {

@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nginx-efs-pvc
+  namespace: default
+spec:
+  accessModes: ["ReadWriteMany"]
+  storageClassName: efs-dynamic-sc
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-efs
+  namespace: default
+  labels:
+    app: nginx-efs
+spec:
+  initContainers:
+    - name: init-html
+      image: busybox
+      command:
+        - sh
+        - -c
+        - 'echo "<html><body><h1>Pod: $POD_NAME</h1></body></html>" > /usr/share/nginx/html/index.html'
+      env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+      volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+  containers:
+    - name: nginx
+      image: nginx:alpine
+      ports:
+        - containerPort: 80
+      volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+  volumes:
+    - name: html
+      persistentVolumeClaim:
+        claimName: nginx-efs-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-efs
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: nginx-efs
+  ports:
+    - port: 80
+      targetPort: 80

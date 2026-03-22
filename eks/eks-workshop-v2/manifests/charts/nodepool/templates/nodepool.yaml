@@ -20,7 +20,10 @@ spec:
         # grr, swap enabled automatically on small types such as t3.nano, kubelet fails then
         - key: karpenter.k8s.aws/instance-category
           operator: In
-          values: ["m"]
+          values: ["m", "t", "c"]
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: ["small", "medium", "large"]
       nodeClassRef:
         group: karpenter.k8s.aws
         kind: EC2NodeClass

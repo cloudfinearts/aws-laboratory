@@ -34,9 +34,9 @@ karpenter pods print no logs, but fail on readiness/liveness probes
 - add eks pod identity addon since IRSA was not setup
 
 Nodeclaim does not have an associated node
-- node failed to register with control plane
+- provisioned node failed to register with control plane
 - check kubelet logs
-    - EKS AMI set swap on for low-mem instance type
+    - EKS AMI set swap on automatically for low-mem instance type
 
 ## EKS pod identity
 https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html

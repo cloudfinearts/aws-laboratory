@@ -50,8 +50,8 @@ resource "aws_ssm_parameter" "endpoint" {
 }
 
 # install mariadb server package to get mysql cli
-# module "bastion" {
-#   source    = "../modules/private-bastion"
+# module "ssm_node" {
+#   source    = "../modules/ssm-node"
 #   subnet_id = module.vpc.private_subnets[0]
 # }
 

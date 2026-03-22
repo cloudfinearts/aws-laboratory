@@ -40,6 +40,7 @@ resource "helm_release" "karpenter" {
     # serviceAccount:
     #   annotations:
     #     eks.amazonaws.com/role-arn: ${module.karpenter.iam_role_arn}
+    replicas: 1
     nodeSelector:
         karpenter-controller: "yes"
     EOT
@@ -50,7 +51,10 @@ resource "helm_release" "nodepool" {
   chart     = "./manifests/charts/nodepool"
   name      = "nodepool"
   namespace = helm_release.karpenter.namespace
-  wait      = false
+  # wait for NodePool finalizer removal on destroy, ensuring Karpenter terminates
+  # provisioned nodes before the helm release is considered deleted
+  wait    = true
+  timeout = 120
 
   # flag --set does not support maps
   # https://helm.sh/docs/intro/using_helm/#the-format-and-limitations-of---set
@@ -62,7 +66,7 @@ resource "helm_release" "nodepool" {
   values = [
     <<EOT
 nodePool:
-  name: karpenter-np
+  name: karpenter-application
 nodeClass:
   role: ${module.karpenter.node_iam_role_name}
   selectorTags:
@@ -72,4 +76,3 @@ nodeClass:
 EOT
   ]
 }
-
